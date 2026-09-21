@@ -1,22 +1,37 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { TopNav } from "@/components/tinytools/top-nav";
+import { PageShell } from "@/components/tinytools/page-shell";
 import { roadmap, tools } from "@/lib/tinytools/catalog";
+import { absoluteUrl } from "@/lib/seo";
+
+const description =
+  "Browse every TinyTools utility: compress images, convert JPEG/PNG/AVIF, resize, crop for social, rotate, remove backgrounds, watermark, strip EXIF, adjust filters, and batch rename — all local in your browser.";
 
 export const metadata: Metadata = {
-  title: "All tools",
-  description:
-    "Every TinyTools utility: compress, convert, resize, crop, rotate, watermark, strip metadata, adjust and social export presets.",
+  title: "All image tools",
+  description,
+  alternates: { canonical: "/tools" },
+  keywords: [
+    "image tools list",
+    "online image compressor",
+    "background remover browser",
+    "batch image rename",
+    "social media crop presets",
+  ],
   openGraph: {
-    title: "All tools — TinyTools",
-    description: "Browse the TinyTools utility catalog and what is coming next.",
+    title: "All image tools — TinyTools",
+    description,
+    url: absoluteUrl("/tools"),
+  },
+  twitter: {
+    title: "All image tools — TinyTools",
+    description,
   },
 };
 
 export default function ToolsPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <TopNav />
+    <PageShell>
       <main className="mx-auto max-w-4xl space-y-10 px-5 py-12">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight">All tools</h1>
@@ -55,6 +70,6 @@ export default function ToolsPage() {
           ))}
         </section>
       </main>
-    </div>
+    </PageShell>
   );
 }

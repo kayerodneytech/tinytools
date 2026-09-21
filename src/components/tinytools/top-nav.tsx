@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./theme";
@@ -19,9 +20,15 @@ export function TopNav() {
     <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-5">
         <Link href="/" className="flex items-center gap-2">
-          <span className="flex size-6 items-center justify-center rounded-md bg-brand text-[11px] font-bold text-brand-foreground">
-            tt
-          </span>
+          <Image
+            src="/site-icon.png"
+            alt=""
+            width={24}
+            height={24}
+            className="size-6 rounded-md object-cover"
+            unoptimized
+            priority
+          />
           <span className="text-sm font-semibold tracking-tight">TinyTools</span>
         </Link>
         <nav className="flex items-center gap-1 text-sm">

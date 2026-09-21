@@ -2,7 +2,7 @@
 
 Fast, local-first image utilities — compress, convert, resize, crop, remove backgrounds, watermark, and more. Processing runs entirely in your browser.
 
-This is a **Next.js (App Router)** port of the original Vite / TanStack Start app in `tinytools-main/`.
+This is a **Next.js (App Router)** app: local-first image utilities with a desktop-inspired workspace.
 
 ## Stack
 
@@ -21,7 +21,7 @@ This is a **Next.js (App Router)** port of the original Vite / TanStack Start ap
 
 ## Develop
 
-Requires Node.js 20+. On this machine, Windows Defender may block `node.exe` / `bun.exe` — allow them or add an exclusion, then:
+Requires Node.js 20+.
 
 ```sh
 npm install
@@ -34,3 +34,13 @@ Open [http://localhost:3000](http://localhost:3000).
 npm run build
 npm start
 ```
+
+## Site URL (SEO)
+
+Set the canonical production URL used for sitemaps, Open Graph, and JSON-LD:
+
+```sh
+NEXT_PUBLIC_SITE_URL=https://your-domain.example
+```
+
+Default: `https://tinytools.pixelpyre-tech.co.zw`

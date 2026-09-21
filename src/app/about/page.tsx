@@ -1,20 +1,28 @@
 import type { Metadata } from "next";
-import { TopNav } from "@/components/tinytools/top-nav";
+import { PageShell } from "@/components/tinytools/page-shell";
+import { absoluteUrl, siteConfig } from "@/lib/seo";
+
+const description =
+  "TinyTools is a free, local-first set of image utilities from PixelPyre Technologies. Compress, convert, resize, crop, and clean up images in your browser — no account, no uploads, built for speed.";
 
 export const metadata: Metadata = {
-  title: "About TinyTools — local-first file utilities",
-  description:
-    "TinyTools is a set of fast, private utilities for everyday file and image tasks. Processing happens in your browser, so nothing is uploaded.",
+  title: "About TinyTools",
+  description,
+  alternates: { canonical: "/about" },
   openGraph: {
-    title: "About TinyTools",
-    description: "Why TinyTools is local-first, account-free and built for speed.",
+    title: "About TinyTools — local-first file utilities",
+    description,
+    url: absoluteUrl("/about"),
+  },
+  twitter: {
+    title: "About TinyTools — local-first file utilities",
+    description,
   },
 };
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <TopNav />
+    <PageShell>
       <main className="mx-auto max-w-2xl space-y-8 px-5 py-14">
         <h1 className="text-2xl font-semibold tracking-tight">About TinyTools</h1>
         <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
@@ -31,6 +39,18 @@ export default function AboutPage() {
             Your last-used format, quality and resize settings are remembered on this device, so
             repeat work takes a single click.
           </p>
+          <p>
+            Built by{" "}
+            <a
+              href={siteConfig.creator.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              {siteConfig.creator.name}
+            </a>
+            .
+          </p>
         </div>
         <dl className="grid gap-3 sm:grid-cols-3">
           {[
@@ -45,6 +65,6 @@ export default function AboutPage() {
           ))}
         </dl>
       </main>
-    </div>
+    </PageShell>
   );
 }
