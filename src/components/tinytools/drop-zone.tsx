@@ -85,7 +85,7 @@ export function DropZone({ onFiles, compact }: Props) {
             Drop files here
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Drop anywhere on the page · batch friendly · nothing leaves your device
+            Drop anywhere on the page · batch friendly · private by default
           </p>
         </div>
         {!compact && (

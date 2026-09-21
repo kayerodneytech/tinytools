@@ -580,7 +580,7 @@ export function Workspace() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {settings.removeBg
-                          ? "The first cutout can take longer while the local model loads."
+                          ? "Sending this image to the server for AI cutout."
                           : "Applying your current recipe to this image."}
                       </p>
                     </div>

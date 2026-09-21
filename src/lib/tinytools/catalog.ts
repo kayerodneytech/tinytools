@@ -66,7 +66,7 @@ export const tools: Tool[] = [
   {
     id: "removebg",
     name: "Remove background",
-    hint: "People, products, logos",
+    hint: "Server AI cutout",
     stage: "look",
     panel: "bgremove",
     preview: "split",

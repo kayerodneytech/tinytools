@@ -129,7 +129,7 @@ const jsonLd = {
         "Compress images",
         "Convert JPEG PNG AVIF",
         "Resize and crop",
-        "Remove background locally",
+        "Remove background",
         "Watermark images",
         "Strip EXIF metadata",
         "Batch rename",

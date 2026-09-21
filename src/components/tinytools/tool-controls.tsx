@@ -110,8 +110,8 @@ export function ToolControls({ tool, settings, onChange, sampleSrc }: Props) {
             />
           </Row>
           <p className="rounded-lg bg-accent/60 px-3 py-2 text-xs text-muted-foreground">
-            Cutouts run locally on your device. The first run downloads the model, so give it a few
-            seconds. Transparent cutouts export as PNG.
+            Cutouts are processed on the server for speed and consistency. Images are used only for
+            this request and are not stored. Transparent cutouts export as PNG.
           </p>
         </>
       )}
