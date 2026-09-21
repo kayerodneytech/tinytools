@@ -62,6 +62,7 @@ export const metadata: Metadata = {
     title: `${siteConfig.name} — ${siteConfig.tagline}`,
     description: siteConfig.description,
     images: [defaultOgImage.url],
+    creator: siteConfig.creator.name,
   },
   robots: {
     index: true,
@@ -76,6 +77,8 @@ export const metadata: Metadata = {
   },
   other: {
     "msapplication-TileColor": "#0a0a0f",
+    copyright: `© ${new Date().getFullYear()} ${siteConfig.creator.name}`,
+    "application-name": siteConfig.name,
   },
 };
 
@@ -99,12 +102,16 @@ const jsonLd = {
       name: siteConfig.name,
       description: siteConfig.description,
       publisher: { "@id": `${siteConfig.url}/#organization` },
+      creator: { "@id": `${siteConfig.url}/#organization` },
+      copyrightHolder: { "@id": `${siteConfig.url}/#organization` },
+      copyrightNotice: `© ${new Date().getFullYear()} ${siteConfig.creator.name}`,
       inLanguage: "en",
     },
     {
       "@type": "Organization",
       "@id": `${siteConfig.url}/#organization`,
       name: siteConfig.creator.name,
+      legalName: siteConfig.creator.name,
       url: siteConfig.creator.url,
       logo: {
         "@type": "ImageObject",
@@ -136,6 +143,8 @@ const jsonLd = {
         "Export to PDF",
       ],
       creator: { "@id": `${siteConfig.url}/#organization` },
+      publisher: { "@id": `${siteConfig.url}/#organization` },
+      copyrightHolder: { "@id": `${siteConfig.url}/#organization` },
       isAccessibleForFree: true,
     },
     {
@@ -143,6 +152,9 @@ const jsonLd = {
       name: siteConfig.name,
       applicationCategory: "UtilitiesApplication",
       operatingSystem: "Web",
+      author: { "@id": `${siteConfig.url}/#organization` },
+      creator: { "@id": `${siteConfig.url}/#organization` },
+      publisher: { "@id": `${siteConfig.url}/#organization` },
       offers: {
         "@type": "Offer",
         price: "0",

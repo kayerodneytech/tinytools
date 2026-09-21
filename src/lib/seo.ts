@@ -3,7 +3,7 @@ export const siteConfig = {
   shortName: "TinyTools",
   tagline: "Compress, convert & resize images in seconds",
   description:
-    "Free local-first image tools that run in your browser. Compress JPEG/PNG/AVIF, convert formats, resize, crop, rotate, remove backgrounds, watermark, strip EXIF, and batch rename — no account, no uploads, nothing leaves your device.",
+    "Free image tools by PixelPyre Technologies. Compress JPEG/PNG/AVIF, convert formats, resize, crop, rotate, remove backgrounds, watermark, strip EXIF, and batch rename — mostly in your browser, no account required.",
   url: process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://tinytools.pixelpyre-tech.co.zw",
   locale: "en_US",
   creator: {
@@ -35,6 +35,7 @@ export const siteConfig = {
     "YouTube thumbnail size",
     "TinyTools",
     "PixelPyre",
+    "PixelPyre Technologies",
   ],
 } as const;
 
@@ -48,5 +49,5 @@ export const defaultOgImage = {
   url: "/site-icon.png",
   width: 512,
   height: 512,
-  alt: "TinyTools — local-first image utilities",
+  alt: "TinyTools by PixelPyre Technologies — image utilities",
 } as const;
