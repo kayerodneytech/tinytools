@@ -117,12 +117,12 @@ export function DropZone({ onFiles, compact }: Props) {
             className={`mt-1 text-xs ${error ? "text-destructive" : "text-muted-foreground"} ${compact && !preparingCount && !error ? "hidden sm:block" : ""}`}
           >
             {preparingCount
-              ? "Decoding locally — nothing is being uploaded"
+              ? "Large images may take a moment"
               : error
                 ? error
                 : compact
                   ? "Drop anywhere or tap to browse"
-                  : "Drop anywhere on the page · batch friendly · private by default"}
+                  : "Drop anywhere or tap to choose your images"}
           </p>
         </div>
         {!compact && (

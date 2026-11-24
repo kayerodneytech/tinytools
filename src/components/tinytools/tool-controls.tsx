@@ -98,13 +98,12 @@ export function ToolControls({ tool, settings, onChange, sampleSrc, itemCount = 
             <div className="rounded-xl border border-brand/30 bg-brand-soft px-3 py-3">
               <p className="text-sm font-medium">Add one more image</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                A collage needs at least two uploaded images. Use the upload area on the left.
+                A collage needs at least two images. Use “Drop more files” to add another.
               </p>
             </div>
           ) : (
             <p className="rounded-lg bg-accent/60 px-3 py-2 text-xs text-muted-foreground">
-              Combining all {itemCount} uploaded images. Reorder and reposition them directly in
-              the preview.
+              Using all {itemCount} images. Reorder and reposition them in the preview.
             </p>
           )}
           <Row label="Arrangement">
@@ -201,8 +200,7 @@ export function ToolControls({ tool, settings, onChange, sampleSrc, itemCount = 
             />
           </Row>
           <p className="rounded-lg bg-accent/60 px-3 py-2 text-xs text-muted-foreground">
-            The AI model runs locally in your browser, so your image never leaves this device. The
-            first cutout may take longer while the model loads. Transparent cutouts export as PNG.
+            The first result may take a moment. Transparent backgrounds are saved as PNG.
           </p>
         </>
       )}
@@ -213,8 +211,7 @@ export function ToolControls({ tool, settings, onChange, sampleSrc, itemCount = 
             <div className="rounded-xl border border-brand/30 bg-brand-soft px-3 py-3">
               <p className="text-sm font-semibold">AI content tag removal is on</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Download a clean re-encoded copy without embedded AI provenance tags, EXIF, GPS,
-                camera or author metadata.
+                Creates a clean copy without the AI content tag or other hidden image details.
               </p>
             </div>
           )}
@@ -432,7 +429,7 @@ export function ToolControls({ tool, settings, onChange, sampleSrc, itemCount = 
                 </div>
               ) : null}
               <label className="flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-elevated px-3 py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:border-brand hover:text-foreground">
-                {settings.watermarkImage ? "Replace logo" : "Upload logo (PNG with transparency)"}
+                {settings.watermarkImage ? "Replace logo" : "Choose logo (transparent PNG)"}
                 <input
                   type="file"
                   accept="image/*"
@@ -457,7 +454,7 @@ export function ToolControls({ tool, settings, onChange, sampleSrc, itemCount = 
               </label>
               {watermarkError && <p className="text-xs text-destructive">{watermarkError}</p>}
               <p className="text-[11px] text-muted-foreground">
-                Your five most recent logos are saved only in this browser. Maximum 1.5 MB each.
+                Your five most recent logos are kept for next time. Maximum 1.5 MB each.
               </p>
             </div>
           </Row>

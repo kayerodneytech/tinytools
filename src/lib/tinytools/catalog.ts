@@ -85,7 +85,7 @@ export const tools: Tool[] = [
   {
     id: "removebg",
     name: "Remove background",
-    hint: "Private, in-browser AI cutout",
+    hint: "Remove backgrounds in one click",
     stage: "look",
     panel: "bgremove",
     preview: "split",
@@ -149,7 +149,7 @@ export const tools: Tool[] = [
   {
     id: "metadata",
     name: "Remove AI content tag",
-    hint: "Strip AI tags, EXIF, GPS & camera data",
+    hint: "Remove AI tags and hidden image details",
     featured: true,
     stage: "export",
     panel: "quality",

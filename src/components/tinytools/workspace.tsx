@@ -323,7 +323,7 @@ export function Workspace() {
     const token = ++collageSeq.current;
     if (collageSources.length < 2) {
       setCollageResult(undefined);
-      setCollageError("Upload at least two images to create a collage.");
+      setCollageError("Add at least two images to create a collage.");
       setCollageWorking(false);
       return;
     }
@@ -609,8 +609,7 @@ export function Workspace() {
             Drop a file. Click. Download. Done.
           </h1>
           <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
-            Lightweight utilities for compressing, converting, resizing and cleaning up images —
-            running entirely in your browser.
+            Simple tools for compressing, converting, resizing and cleaning up images.
           </p>
         </div>
         <DropZone onFiles={addFiles} />
@@ -921,9 +920,9 @@ export function Workspace() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {collageWorking
-                          ? `Combining ${collageSources.length} images locally in your browser.`
+                          ? `Combining ${collageSources.length} images.`
                           : settings.removeBg
-                          ? "Running the AI cutout locally in your browser."
+                          ? "Removing the background. This may take a moment."
                           : "Applying your current recipe to this image."}
                       </p>
                     </div>

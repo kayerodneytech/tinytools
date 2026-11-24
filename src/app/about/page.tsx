@@ -3,19 +3,19 @@ import { PageShell } from "@/components/tinytools/page-shell";
 import { absoluteUrl, siteConfig } from "@/lib/seo";
 
 const description =
-  "TinyTools is a free, local-first set of image utilities from PixelPyre Technologies. Compress, convert, resize, crop, and clean up images in your browser — no account, no uploads, built for speed.";
+  "TinyTools makes it quick and easy to compress, convert, resize, crop, and clean up images.";
 
 export const metadata: Metadata = {
   title: "About TinyTools",
   description,
   alternates: { canonical: "/about" },
   openGraph: {
-    title: "About TinyTools — local-first file utilities",
+    title: "About TinyTools — quick and simple image tools",
     description,
     url: absoluteUrl("/about"),
   },
   twitter: {
-    title: "About TinyTools — local-first file utilities",
+    title: "About TinyTools — quick and simple image tools",
     description,
   },
 };
@@ -31,13 +31,11 @@ export default function AboutPage() {
             click once, download, get back to work. No account, no projects, no tutorials.
           </p>
           <p>
-            Image processing happens locally with the browser&apos;s own canvas and codec pipeline.
-            Your files never touch a server, which makes it private and workable on flaky
-            connections. Even AI background removal runs locally in your browser.
+            Everything is designed to stay simple: choose your images, pick a tool, and save the
+            result. There are no accounts, setup steps, or complicated menus.
           </p>
           <p>
-            Your last-used format, quality and resize settings are remembered on this device, so
-            repeat work takes a single click.
+            Your recent choices are remembered, so repeat work takes fewer clicks.
           </p>
           <p>
             Built by{" "}
@@ -54,9 +52,9 @@ export default function AboutPage() {
         </div>
         <dl className="grid gap-3 sm:grid-cols-3">
           {[
-            ["Local", "Nothing uploaded"],
-            ["Batch", "Drop 100 files"],
-            ["Instant", "Live preview, no apply button"],
+            ["Simple", "No account or setup"],
+            ["Flexible", "Use one image or many"],
+            ["Quick", "See changes as you work"],
           ].map(([k, v]) => (
             <div key={k} className="panel px-4 py-3">
               <dt className="text-sm font-medium">{k}</dt>

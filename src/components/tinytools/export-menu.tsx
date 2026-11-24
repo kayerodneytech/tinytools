@@ -27,7 +27,7 @@ export function ExportMenu() {
   if (!api || !api.count) {
     return (
       <span className="hidden text-xs text-muted-foreground sm:inline">
-        Processed locally in your browser
+        Add an image to get started
       </span>
     );
   }

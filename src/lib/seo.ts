@@ -3,7 +3,7 @@ export const siteConfig = {
   shortName: "TinyTools",
   tagline: "Compress, convert & resize images in seconds",
   description:
-    "Free image tools by PixelPyre Technologies. Compress JPEG/PNG/AVIF, convert formats, resize, crop, rotate, remove backgrounds, watermark, strip EXIF, and batch rename — mostly in your browser, no account required.",
+    "Free image tools by PixelPyre Technologies. Compress, convert, resize, crop, remove backgrounds, add watermarks, create collages, and more.",
   url: process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://tinytools.pixelpyre-tech.co.zw",
   locale: "en_US",
   creator: {

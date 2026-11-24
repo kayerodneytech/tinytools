@@ -5,7 +5,7 @@ import { orderedTools, roadmap } from "@/lib/tinytools/catalog";
 import { absoluteUrl } from "@/lib/seo";
 
 const description =
-  "Browse every TinyTools utility: compress images, convert JPEG/PNG/AVIF, resize, crop for social, rotate, remove backgrounds, watermark, strip EXIF, adjust filters, and batch rename — all local in your browser.";
+  "Simple tools to compress, convert, resize, crop, rotate, clean up, and combine your images.";
 
 export const metadata: Metadata = {
   title: "All image tools",
@@ -36,7 +36,7 @@ export default function ToolsPage() {
         <header>
           <h1 className="text-2xl font-semibold tracking-tight">All tools</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Available now, running locally in your browser. Every tool works with batches.
+            Choose a tool and get started. Use one image or several at once.
           </p>
         </header>
 
