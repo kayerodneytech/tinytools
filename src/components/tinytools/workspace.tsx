@@ -112,29 +112,52 @@ export function Workspace() {
   const tool: Tool | undefined = toolId ? toolById(toolId) : undefined;
 
   const addFiles = useCallback(async (files: File[]) => {
-    const loaded = await Promise.all(
-      files.map(async (file) => {
+    let added = 0;
+    let lastError: unknown;
+    for (const file of files) {
+      try {
         // HEIC needs a decoded copy for both the bitmap and the on-screen preview.
-        const [source, hasAiMetadata] = await Promise.all([
-          isHeicFile(file) ? decodeHeic(file) : Promise.resolve(file as Blob),
-          hasAiContentMetadata(file),
-        ]);
+        const source = isHeicFile(file) ? await decodeHeic(file) : file;
         const bitmap = await loadBitmap(source);
-        return {
-          id: `f${++counter}`,
+        const id = `f${++counter}`;
+        const item: Item = {
+          id,
           file,
           source,
           url: URL.createObjectURL(source),
           width: bitmap.width,
           height: bitmap.height,
           bitmap,
-          hasAiMetadata,
+          hasAiMetadata: false,
           status: "idle" as const,
         };
-      }),
-    );
-    setItems((prev) => [...prev, ...loaded]);
-    setActiveId((prev) => prev ?? loaded[0]?.id ?? null);
+        setItems((current) => [...current, item]);
+        setActiveId((current) => current ?? id);
+        added += 1;
+
+        // Metadata inspection should never delay the image appearing in the workspace.
+        void hasAiContentMetadata(file).then((hasAiMetadata) => {
+          if (!hasAiMetadata) return;
+          setItems((current) =>
+            current.map((candidate) =>
+              candidate.id === id ? { ...candidate, hasAiMetadata: true } : candidate,
+            ),
+          );
+        });
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (!added) {
+      throw lastError instanceof Error
+        ? lastError
+        : new Error("These images could not be decoded on this device.");
+    }
+    if (lastError && added < files.length) {
+      throw new Error(
+        `${added} of ${files.length} images were prepared. One or more files could not be decoded.`,
+      );
+    }
   }, []);
 
   const aspect = active ? active.width / active.height : 4 / 3;

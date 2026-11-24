@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ClipboardPaste, FolderOpen, UploadCloud } from "lucide-react";
+import { AlertCircle, ClipboardPaste, FolderOpen, LoaderCircle, UploadCloud } from "lucide-react";
 
 type Props = {
-  onFiles: (files: File[]) => void;
+  onFiles: (files: File[]) => void | Promise<void>;
   compact?: boolean;
 };
 
@@ -13,13 +13,24 @@ const isSupportedImage = (f: File) =>
 
 export function DropZone({ onFiles, compact }: Props) {
   const [over, setOver] = useState(false);
+  const [preparingCount, setPreparingCount] = useState(0);
+  const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const accept = useCallback(
-    (list: FileList | null) => {
+    async (list: FileList | null) => {
       if (!list) return;
       const files = Array.from(list).filter(isSupportedImage);
-      if (files.length) onFiles(files);
+      if (!files.length) return;
+      setPreparingCount(files.length);
+      setError("");
+      try {
+        await onFiles(files);
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "This image could not be prepared.");
+      } finally {
+        setPreparingCount(0);
+      }
     },
     [onFiles],
   );
@@ -27,13 +38,13 @@ export function DropZone({ onFiles, compact }: Props) {
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
       const files = Array.from(e.clipboardData?.files ?? []).filter(isSupportedImage);
-      if (files.length) onFiles(files);
+      if (files.length) void accept(e.clipboardData?.files ?? null);
     };
     const prevent = (e: DragEvent) => e.preventDefault();
     const onDrop = (e: DragEvent) => {
       e.preventDefault();
       setOver(false);
-      accept(e.dataTransfer?.files ?? null);
+      void accept(e.dataTransfer?.files ?? null);
     };
     const onDragOver = (e: DragEvent) => {
       e.preventDefault();
@@ -54,11 +65,13 @@ export function DropZone({ onFiles, compact }: Props) {
       window.removeEventListener("drop", onDrop);
       window.removeEventListener("dragenter", prevent);
     };
-  }, [accept, onFiles]);
+  }, [accept]);
 
   return (
     <div
-      onClick={() => inputRef.current?.click()}
+      onClick={() => {
+        if (!preparingCount) inputRef.current?.click();
+      }}
       className={`group cursor-pointer rounded-2xl border border-dashed transition-all duration-200 ${
         over
           ? "border-brand bg-brand-soft"
@@ -72,7 +85,7 @@ export function DropZone({ onFiles, compact }: Props) {
         accept="image/*,.heic,.heif"
         className="hidden"
         onChange={(e) => {
-          accept(e.target.files);
+          void accept(e.target.files);
           e.currentTarget.value = "";
         }}
       />
@@ -82,16 +95,34 @@ export function DropZone({ onFiles, compact }: Props) {
         <span
           className={`flex shrink-0 items-center justify-center rounded-xl bg-accent text-muted-foreground transition-colors group-hover:text-brand ${compact ? "size-9" : "size-10"}`}
         >
-          <UploadCloud className="size-5" />
+          {preparingCount ? (
+            <LoaderCircle className="size-5 animate-spin text-brand" />
+          ) : error ? (
+            <AlertCircle className="size-5 text-destructive" />
+          ) : (
+            <UploadCloud className="size-5" />
+          )}
         </span>
         <div>
           <p className={compact ? "text-sm font-medium" : "text-lg font-semibold"}>
-            {compact ? "Drop more files" : "Drop files here"}
+            {preparingCount
+              ? `Preparing ${preparingCount} image${preparingCount > 1 ? "s" : ""}…`
+              : error
+                ? "Could not open image"
+                : compact
+                  ? "Drop more files"
+                  : "Drop files here"}
           </p>
-          <p className={`mt-1 text-xs text-muted-foreground ${compact ? "hidden sm:block" : ""}`}>
-            {compact
-              ? "Drop anywhere or tap to browse"
-              : "Drop anywhere on the page · batch friendly · private by default"}
+          <p
+            className={`mt-1 text-xs ${error ? "text-destructive" : "text-muted-foreground"} ${compact && !preparingCount && !error ? "hidden sm:block" : ""}`}
+          >
+            {preparingCount
+              ? "Decoding locally — nothing is being uploaded"
+              : error
+                ? error
+                : compact
+                  ? "Drop anywhere or tap to browse"
+                  : "Drop anywhere on the page · batch friendly · private by default"}
           </p>
         </div>
         {!compact && (
