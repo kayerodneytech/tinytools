@@ -38,6 +38,12 @@ export type ProcessSettings = {
   cropRect: CropRect | null;
   socialPreset: string | null;
   removeBg: boolean;
+  removeMetadata: boolean;
+  collageEnabled: boolean;
+  collagePreset: "grid" | "columns" | "rows" | "feature-left" | "feature-top";
+  collageAspect: "1:1" | "4:3" | "16:9" | "4:5";
+  collageGap: number;
+  collageBackground: "white" | "black" | "soft";
 } & RenameOptions;
 
 export const defaultSettings: ProcessSettings = {
@@ -67,6 +73,12 @@ export const defaultSettings: ProcessSettings = {
   cropRect: null,
   socialPreset: null,
   removeBg: false,
+  removeMetadata: false,
+  collageEnabled: false,
+  collagePreset: "grid",
+  collageAspect: "1:1",
+  collageGap: 16,
+  collageBackground: "white",
   ...defaultRename,
 };
 

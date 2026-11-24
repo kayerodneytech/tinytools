@@ -31,6 +31,7 @@ import { formatBytes, percentDelta } from "@/lib/tinytools/format";
 import { buildFilename } from "@/lib/tinytools/rename";
 import { getPrefs, pushRecentTool, setPrefs, usePrefs } from "@/lib/tinytools/prefs";
 import { cutoutBitmap } from "@/lib/tinytools/bg";
+import { processCollage } from "@/lib/tinytools/collage";
 import { setExportApi, type ExportOptions } from "@/lib/tinytools/export-bus";
 import { ToolIcon } from "./tool-icon";
 
@@ -51,6 +52,7 @@ let counter = 0;
 
 /** A step counts as active once any of its settings differ from the defaults. */
 function isStepActive(tool: Tool, settings: ProcessSettings) {
+  if (tool.id === "collage") return settings.collageEnabled;
   return tool.keys.some((k) => JSON.stringify(settings[k]) !== JSON.stringify(defaultSettings[k]));
 }
 
@@ -67,10 +69,14 @@ export function Workspace() {
   const [settings, setSettings] = useState<ProcessSettings>(defaultSettings);
   const [prefs] = usePrefs();
   const [busy, setBusy] = useState(false);
+  const [collageResult, setCollageResult] = useState<ProcessResult | undefined>();
+  const [collageWorking, setCollageWorking] = useState(false);
+  const [collageError, setCollageError] = useState("");
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(
     null,
   );
   const seq = useRef(0);
+  const collageSeq = useRef(0);
 
   const active = items.find((i) => i.id === activeId) ?? items[0];
   const activeIndex = Math.max(
@@ -120,6 +126,7 @@ export function Workspace() {
         }
         Object.assign(next, t.apply ?? {});
       }
+      next.collageEnabled = id === "collage";
       if (t.preview === "crop" && !next.cropRect) next.cropRect = { x: 0, y: 0, w: 1, h: 1 };
       return next;
     });
@@ -155,7 +162,7 @@ export function Workspace() {
 
   // Live preview: reprocess the active file whenever settings change.
   useEffect(() => {
-    if (!active) return;
+    if (!active || settings.collageEnabled) return;
     const token = ++seq.current;
     const timer = setTimeout(async () => {
       try {
@@ -175,6 +182,48 @@ export function Workspace() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings, active?.id, activeIndex]);
+
+  const itemSignature = items.map((item) => item.id).join(",");
+
+  // Collages are a single composition made from every uploaded image.
+  useEffect(() => {
+    if (!settings.collageEnabled) {
+      collageSeq.current += 1;
+      setCollageWorking(false);
+      return;
+    }
+    const token = ++collageSeq.current;
+    if (items.length < 2) {
+      setCollageResult((previous) => {
+        if (previous) URL.revokeObjectURL(previous.url);
+        return undefined;
+      });
+      setCollageError("Upload at least two images to create a collage.");
+      setCollageWorking(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setCollageWorking(true);
+      setCollageError("");
+      try {
+        const bitmaps = await Promise.all(items.map(bitmapFor));
+        const result = await processCollage(bitmaps, settings);
+        if (token !== collageSeq.current) return;
+        setCollageResult((previous) => {
+          if (previous) URL.revokeObjectURL(previous.url);
+          return result;
+        });
+      } catch (error) {
+        if (token !== collageSeq.current) return;
+        setCollageError(error instanceof Error ? error.message : "Could not create the collage.");
+      } finally {
+        if (token === collageSeq.current) setCollageWorking(false);
+      }
+    }, 120);
+    return () => clearTimeout(timer);
+    // itemSignature intentionally represents the source list without reacting to preview results.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings, itemSignature, bitmapFor]);
 
   const applyToAll = useCallback(async () => {
     setBusy(true);
@@ -203,6 +252,33 @@ export function Workspace() {
 
   const runExport = useCallback(
     async (opts: ExportOptions) => {
+      if (settings.collageEnabled) {
+        if (items.length < 2) return;
+        const exportSettings: ProcessSettings = {
+          ...settings,
+          ...(opts.format ? { format: opts.format } : {}),
+          ...(opts.quality ? { quality: opts.quality } : {}),
+        };
+        setBusy(true);
+        setBatchProgress({ current: 1, total: 1 });
+        try {
+          const result = await processCollage(await Promise.all(items.map(bitmapFor)), exportSettings);
+          setCollageResult((previous) => {
+            if (previous) URL.revokeObjectURL(previous.url);
+            return result;
+          });
+          if (opts.as === "pdf") {
+            const { downloadPdf } = await import("@/lib/tinytools/pdf");
+            await downloadPdf([result], opts.pdfPageSize);
+          } else {
+            downloadBlob(result.blob, result.filename);
+          }
+        } finally {
+          setBusy(false);
+          setBatchProgress(null);
+        }
+        return;
+      }
       const targets = opts.scope === "current" ? (active ? [active] : []) : items;
       if (!targets.length) return;
       const exportSettings: ProcessSettings = {
@@ -250,15 +326,25 @@ export function Workspace() {
 
   // The nav's Export menu drives the same pipeline as the in-page buttons.
   useEffect(() => {
-    setExportApi({ count: items.length, hasCurrent: !!active, busy, run: runExport });
+    setExportApi({
+      count: settings.collageEnabled ? 1 : items.length,
+      hasCurrent: !!active,
+      busy,
+      run: runExport,
+    });
     return () => setExportApi(null);
-  }, [items.length, active, busy, runExport]);
+  }, [items.length, active, busy, runExport, settings.collageEnabled]);
 
   const reset = useCallback(() => {
+    setCollageResult((previous) => {
+      if (previous) URL.revokeObjectURL(previous.url);
+      return undefined;
+    });
     setItems([]);
     setActiveId(null);
     setToolId(null);
     setSettings(defaultSettings);
+    setCollageError("");
   }, []);
 
   // Keyboard shortcuts: Enter exports the current image, Escape closes the tool, Delete removes it.
@@ -267,7 +353,8 @@ export function Workspace() {
       const typing = (e.target as HTMLElement)?.closest("input, textarea");
       if (typing) return;
       if (e.key === "Escape") setToolId(null);
-      if (e.key === "Enter" && active?.result) {
+      const hasResult = settings.collageEnabled ? collageResult : active?.result;
+      if (e.key === "Enter" && hasResult) {
         void runExport({ scope: "current", as: "files" });
       }
       if ((e.key === "Delete" || e.key === "Backspace") && active) {
@@ -277,7 +364,7 @@ export function Workspace() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active, runExport]);
+  }, [active, collageResult, runExport, settings.collageEnabled]);
 
   const suggestions = useMemo(() => {
     if (!active) return [];
@@ -285,6 +372,7 @@ export function Workspace() {
     if (active.file.size > 800_000)
       out.push({ id: "compress", label: "Compress — this file is heavy" });
     if (active.width > 2400) out.push({ id: "resize", label: "Resize for web" });
+    if (items.length > 1) out.push({ id: "collage", label: `Make a collage from ${items.length} images` });
     if (items.length > 1) out.push({ id: "rename", label: `Batch rename ${items.length} files` });
     out.push({ id: "crop", label: "Crop for social media" });
     return out.slice(0, 3);
@@ -296,6 +384,8 @@ export function Workspace() {
   const socialPreset = socialPresetById(settings.socialPreset);
   const resultFilename = active?.result?.filename ?? "";
   const resultExt = resultFilename.slice(resultFilename.lastIndexOf(".") + 1) || "png";
+  const visibleResult =
+    tool?.id === "collage" ? (settings.collageEnabled ? collageResult : undefined) : active?.result;
 
   if (!items.length) {
     return (
@@ -317,7 +407,12 @@ export function Workspace() {
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {(recent.length ? [...recent, ...tools.filter((t) => !recent.includes(t))] : tools).map(
               (t) => (
-                <div key={t.id} className="panel px-3.5 py-3 transition-shadow hover:shadow-lift">
+                <div
+                  key={t.id}
+                  className={`panel px-3.5 py-3 transition-shadow hover:shadow-lift ${
+                    t.id === "metadata" ? "border-brand/35 bg-brand-soft/40" : ""
+                  }`}
+                >
                   <p className="flex items-center gap-2 text-sm font-medium">
                     <ToolIcon id={t.id} /> {t.name}
                   </p>
@@ -389,7 +484,9 @@ export function Workspace() {
                           ? "border-brand bg-brand-soft"
                           : on
                             ? "border-border bg-elevated"
-                            : "border-border bg-surface hover:bg-accent/60"
+                            : t.id === "metadata"
+                              ? "border-brand/35 bg-brand-soft/60 hover:border-brand"
+                              : "border-border bg-surface hover:bg-accent/60"
                       }`}
                     >
                       <button
@@ -544,18 +641,30 @@ export function Workspace() {
                   settings={settings}
                   onChange={patchSettings}
                   sampleSrc={active?.url}
+                  itemCount={items.length}
                 />
                 <div className="flex flex-col gap-2 border-t border-border pt-3">
-                  <Button
-                    size="sm"
-                    onClick={applyToAll}
-                    disabled={busy || items.length < 2}
-                    className="w-full"
-                  >
-                    {batchProgress
-                      ? `Processing ${batchProgress.current} of ${batchProgress.total}…`
-                      : `Apply to all ${items.length} files`}
-                  </Button>
+                  {tool.id === "collage" ? (
+                    <Button
+                      size="sm"
+                      onClick={() => void runExport({ scope: "current", as: "files" })}
+                      disabled={busy || collageWorking || items.length < 2 || !collageResult}
+                      className="w-full"
+                    >
+                      {busy ? "Exporting collage…" : "Download collage"}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={applyToAll}
+                      disabled={busy || items.length < 2}
+                      className="w-full"
+                    >
+                      {batchProgress
+                        ? `Processing ${batchProgress.current} of ${batchProgress.total}…`
+                        : `Apply to all ${items.length} files`}
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"
@@ -569,28 +678,34 @@ export function Workspace() {
 
               <div
                 className="panel relative space-y-4 p-4"
-                aria-busy={active?.status === "working"}
+                aria-busy={tool.id === "collage" ? collageWorking : active?.status === "working"}
               >
-                {active?.status === "working" && (
+                {(tool.id === "collage" ? collageWorking : active?.status === "working") && (
                   <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/72 backdrop-blur-[2px]">
                     <div className="flex max-w-xs flex-col items-center gap-2 px-6 text-center">
                       <LoaderCircle className="size-7 animate-spin text-brand" />
                       <p className="text-sm font-medium">
-                        {settings.removeBg ? "Removing background…" : "Updating preview…"}
+                        {collageWorking
+                          ? "Arranging your collage…"
+                          : settings.removeBg
+                            ? "Removing background…"
+                            : "Updating preview…"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {settings.removeBg
+                        {collageWorking
+                          ? `Combining ${items.length} images locally in your browser.`
+                          : settings.removeBg
                           ? "Sending this image to the server for AI cutout."
                           : "Applying your current recipe to this image."}
                       </p>
                     </div>
                   </div>
                 )}
-                {active?.result ? (
+                {visibleResult ? (
                   <>
                     {tool.preview === "crop" && socialPreset ? (
                       <SocialMockup
-                        src={active.result.url}
+                        src={visibleResult.url}
                         platform={socialPreset.platform}
                         alt={`${active.file.name} on ${socialPreset.label}`}
                       />
@@ -633,38 +748,45 @@ export function Workspace() {
                     ) : tool.preview === "split" ? (
                       <CompareSlider
                         before={active.url}
-                        after={active.result.url}
+                        after={visibleResult.url}
                         alt={active.file.name}
                         aspect={aspect}
                       />
                     ) : (
                       <img
-                        src={active.result.url}
-                        alt={`${active.file.name} result`}
+                        src={visibleResult.url}
+                        alt={tool.id === "collage" ? "Collage preview" : `${active.file.name} result`}
                         className="checkerboard max-h-[58vh] w-full rounded-xl border border-border object-contain"
                       />
                     )}
 
                     <div className="grid grid-cols-3 gap-3 text-center">
-                      <Stat label="Original" value={formatBytes(active.file.size)} />
-                      <Stat label="Result" value={formatBytes(active.result.blob.size)} />
                       <Stat
-                        label="Saved"
-                        value={`${percentDelta(active.file.size, active.result.blob.size)}%`}
+                        label={tool.id === "collage" ? "Sources" : "Original"}
+                        value={formatBytes(tool.id === "collage" ? totalBefore : active.file.size)}
+                      />
+                      <Stat label="Result" value={formatBytes(visibleResult.blob.size)} />
+                      <Stat
+                        label={tool.id === "collage" ? "Images" : "Saved"}
+                        value={
+                          tool.id === "collage"
+                            ? String(items.length)
+                            : `${percentDelta(active.file.size, visibleResult.blob.size)}%`
+                        }
                         accent
                       />
                     </div>
                     <div className="num text-center text-xs text-muted-foreground">
-                      {active.result.width}×{active.result.height} ·{" "}
-                      {active.result.type.replace("image/", "").toUpperCase()} ·{" "}
-                      {active.result.filename}
+                      {visibleResult.width}×{visibleResult.height} ·{" "}
+                      {visibleResult.type.replace("image/", "").toUpperCase()} ·{" "}
+                      {visibleResult.filename}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={async () => {
-                          const result = active.result;
+                          const result = visibleResult;
                           if (!result) return;
                           try {
                             await navigator.clipboard.write([
@@ -685,9 +807,9 @@ export function Workspace() {
                     </div>
                   </>
                 ) : (
-                  <p className="py-16 text-center text-sm text-muted-foreground">
-                    Rendering preview…
-                  </p>
+                  <div className="py-16 text-center text-sm text-muted-foreground">
+                    {collageError || "Rendering preview…"}
+                  </div>
                 )}
               </div>
             </div>

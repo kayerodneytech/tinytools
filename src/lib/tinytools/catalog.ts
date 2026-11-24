@@ -8,6 +8,7 @@ export type ToolId =
   | "rotate"
   | "removebg"
   | "watermark"
+  | "collage"
   | "metadata"
   | "adjust"
   | "rename";
@@ -26,6 +27,7 @@ export type Tool = {
     | "orient"
     | "bgremove"
     | "watermark"
+    | "collage"
     | "adjust"
     | "rename";
   /** split = before/after slider, result = single result canvas, crop = interactive cropper */
@@ -36,6 +38,22 @@ export type Tool = {
 };
 
 export const tools: Tool[] = [
+  {
+    id: "collage",
+    name: "Collage",
+    hint: "Combine 2+ images in flexible layouts",
+    stage: "shape",
+    panel: "collage",
+    preview: "result",
+    keys: [
+      "collageEnabled",
+      "collagePreset",
+      "collageAspect",
+      "collageGap",
+      "collageBackground",
+    ],
+    apply: { collageEnabled: true },
+  },
   {
     id: "crop",
     name: "Crop",
@@ -129,13 +147,13 @@ export const tools: Tool[] = [
   },
   {
     id: "metadata",
-    name: "Remove metadata",
-    hint: "Strip EXIF, GPS, camera",
+    name: "Remove AI content tag",
+    hint: "Strip AI tags, EXIF, GPS & camera data",
     stage: "export",
     panel: "quality",
     preview: "split",
-    keys: ["quality"],
-    apply: { quality: 92 },
+    keys: ["removeMetadata"],
+    apply: { removeMetadata: true },
   },
   {
     id: "rename",

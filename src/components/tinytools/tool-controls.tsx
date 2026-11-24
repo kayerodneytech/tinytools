@@ -23,6 +23,7 @@ type Props = {
   onChange: (patch: Partial<ProcessSettings>) => void;
   /** Sample image used to render live filter preset thumbnails. */
   sampleSrc?: string | undefined;
+  itemCount?: number;
 };
 
 function Row({
@@ -81,7 +82,7 @@ const formatOptions: { label: string; value: OutputFormat | "keep" }[] = [
   { label: "AVIF", value: "image/avif" },
 ];
 
-export function ToolControls({ tool, settings, onChange, sampleSrc }: Props) {
+export function ToolControls({ tool, settings, onChange, sampleSrc, itemCount = 0 }: Props) {
   const [savedWatermarks, setSavedWatermarks] = useState<SavedWatermark[]>([]);
   const [watermarkError, setWatermarkError] = useState("");
 
@@ -89,6 +90,94 @@ export function ToolControls({ tool, settings, onChange, sampleSrc }: Props) {
 
   return (
     <div className="space-y-5">
+      {tool.panel === "collage" && (
+        <>
+          {itemCount < 2 ? (
+            <div className="rounded-xl border border-brand/30 bg-brand-soft px-3 py-3">
+              <p className="text-sm font-medium">Add one more image</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                A collage needs at least two uploaded images. Use the upload area on the left.
+              </p>
+            </div>
+          ) : (
+            <p className="rounded-lg bg-accent/60 px-3 py-2 text-xs text-muted-foreground">
+              Combining all {itemCount} uploaded images. Images are center-cropped to fill each
+              frame.
+            </p>
+          )}
+          <Row label="Arrangement">
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["grid", "Grid", "grid-cols-2"],
+                  ["columns", "Columns", "grid-cols-3"],
+                  ["rows", "Rows", "grid-cols-1"],
+                  ["feature-left", "Feature left", "grid-cols-[2fr_1fr]"],
+                  ["feature-top", "Feature top", "grid-cols-2"],
+                ] as const
+              ).map(([value, label, gridClass]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => onChange({ collagePreset: value })}
+                  className={`rounded-xl border p-2 text-left transition-colors ${
+                    settings.collagePreset === value
+                      ? "border-brand bg-brand-soft"
+                      : "border-border bg-elevated hover:border-border-strong"
+                  }`}
+                >
+                  <span className={`grid h-9 gap-1 ${gridClass}`}>
+                    {[0, 1, 2, 3]
+                      .slice(0, value === "columns" ? 3 : value === "rows" ? 3 : 4)
+                      .map((cell) => (
+                        <span
+                          key={cell}
+                          className={`rounded-sm bg-brand/25 ${
+                            value === "feature-left" && cell === 0 ? "row-span-3" : ""
+                          } ${value === "feature-top" && cell === 0 ? "col-span-2" : ""}`}
+                        />
+                      ))}
+                  </span>
+                  <span className="mt-1.5 block text-[11px] font-medium">{label}</span>
+                </button>
+              ))}
+            </div>
+          </Row>
+          <Row label="Canvas shape">
+            <Chips
+              options={[
+                { label: "Square", value: "1:1" },
+                { label: "Landscape", value: "4:3" },
+                { label: "Wide", value: "16:9" },
+                { label: "Portrait", value: "4:5" },
+              ]}
+              value={settings.collageAspect}
+              onSelect={(value) => onChange({ collageAspect: value })}
+            />
+          </Row>
+          <Row label="Spacing" value={`${settings.collageGap}px`}>
+            <Slider
+              min={0}
+              max={64}
+              step={2}
+              value={[settings.collageGap]}
+              onValueChange={([value]) => onChange({ collageGap: value ?? 16 })}
+            />
+          </Row>
+          <Row label="Background">
+            <Chips
+              options={[
+                { label: "White", value: "white" },
+                { label: "Soft gray", value: "soft" },
+                { label: "Black", value: "black" },
+              ]}
+              value={settings.collageBackground}
+              onSelect={(value) => onChange({ collageBackground: value })}
+            />
+          </Row>
+        </>
+      )}
+
       {tool.panel === "bgremove" && (
         <>
           <div className="flex items-center justify-between gap-3">
@@ -118,6 +207,15 @@ export function ToolControls({ tool, settings, onChange, sampleSrc }: Props) {
 
       {(tool.panel === "quality" || tool.panel === "format") && (
         <>
+          {tool.id === "metadata" && (
+            <div className="rounded-xl border border-brand/30 bg-brand-soft px-3 py-3">
+              <p className="text-sm font-semibold">AI content tag removal is on</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Download a clean re-encoded copy without embedded AI provenance tags, EXIF, GPS,
+                camera or author metadata.
+              </p>
+            </div>
+          )}
           {tool.panel === "format" && (
             <Row label="Output format">
               <Chips
@@ -149,7 +247,7 @@ export function ToolControls({ tool, settings, onChange, sampleSrc }: Props) {
           </Row>
           {tool.id === "metadata" && (
             <p className="rounded-lg bg-accent/60 px-3 py-2 text-xs text-muted-foreground">
-              Re-encoding drops all EXIF, GPS, camera and author data.
+              Your original stays untouched. Only the downloaded copy is cleaned.
             </p>
           )}
         </>
