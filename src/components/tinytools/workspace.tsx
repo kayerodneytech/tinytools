@@ -18,7 +18,14 @@ import { CompareSlider } from "./compare-slider";
 import { CropEditor, centeredRect, ratioValue } from "./crop-editor";
 import { ToolControls } from "./tool-controls";
 import { SocialMockup } from "./social-mockup";
-import { socialPresetById, stages, tools, toolById, type Tool } from "@/lib/tinytools/catalog";
+import {
+  orderedTools,
+  socialPresetById,
+  stages,
+  tools,
+  toolById,
+  type Tool,
+} from "@/lib/tinytools/catalog";
 import {
   decodeHeic,
   defaultSettings,
@@ -38,6 +45,7 @@ import type { CollagePosition } from "@/lib/tinytools/collage";
 import { setExportApi, type ExportOptions } from "@/lib/tinytools/export-bus";
 import { ToolIcon } from "./tool-icon";
 import { CollageEditor } from "./collage-editor";
+import { hasAiContentMetadata } from "@/lib/tinytools/metadata";
 
 type Item = {
   id: string;
@@ -51,6 +59,7 @@ type Item = {
   result?: ProcessResult;
   status: "idle" | "working" | "done" | "error";
   collage?: CollageRecipe;
+  hasAiMetadata?: boolean;
 };
 
 type CollageRecipe = {
@@ -106,7 +115,10 @@ export function Workspace() {
     const loaded = await Promise.all(
       files.map(async (file) => {
         // HEIC needs a decoded copy for both the bitmap and the on-screen preview.
-        const source = isHeicFile(file) ? await decodeHeic(file) : file;
+        const [source, hasAiMetadata] = await Promise.all([
+          isHeicFile(file) ? decodeHeic(file) : Promise.resolve(file as Blob),
+          hasAiContentMetadata(file),
+        ]);
         const bitmap = await loadBitmap(source);
         return {
           id: `f${++counter}`,
@@ -116,6 +128,7 @@ export function Workspace() {
           width: bitmap.width,
           height: bitmap.height,
           bitmap,
+          hasAiMetadata,
           status: "idle" as const,
         };
       }),
@@ -204,7 +217,10 @@ export function Workspace() {
     setSettings((s) => ({ ...s, ...resetKeys(t) }));
   }, []);
 
-  const activeSteps = useMemo(() => tools.filter((t) => isStepActive(t, settings)), [settings]);
+  const activeSteps = useMemo(
+    () => orderedTools.filter((tool) => isStepActive(tool, settings)),
+    [settings],
+  );
 
   // Live preview: reprocess the active file whenever settings change.
   useEffect(() => {
@@ -514,6 +530,9 @@ export function Workspace() {
   const suggestions = useMemo(() => {
     if (!active) return [];
     const out: { id: string; label: string }[] = [];
+    if (active.hasAiMetadata) {
+      out.push({ id: "metadata", label: "Remove the AI-generated content tag" });
+    }
     if (active.file.size > 800_000)
       out.push({ id: "compress", label: "Compress — this file is heavy" });
     if (active.width > 2400) out.push({ id: "resize", label: "Resize for web" });
@@ -524,6 +543,23 @@ export function Workspace() {
   }, [active, items.length]);
 
   const recent = prefs.recentTools.map(toolById).filter(Boolean) as Tool[];
+  const landingTools = [
+    ...orderedTools.filter((tool) => tool.featured),
+    ...recent.filter((tool) => !tool.featured),
+    ...orderedTools.filter((tool) => !tool.featured && !recent.includes(tool)),
+  ];
+  const toolGroups = [
+    {
+      id: "featured",
+      label: "Featured",
+      items: orderedTools.filter((tool) => tool.featured),
+    },
+    ...stages.map((stage) => ({
+      id: stage.id,
+      label: stage.label,
+      items: tools.filter((tool) => tool.stage === stage.id && !tool.featured),
+    })),
+  ];
   const totalBefore = items.reduce((n, i) => n + i.file.size, 0);
   const totalAfter = items.reduce((n, i) => n + (i.result?.blob.size ?? i.file.size), 0);
   const socialPreset = socialPresetById(settings.socialPreset);
@@ -564,24 +600,22 @@ export function Workspace() {
             {recent.length ? "Recently used" : "Tools"}
           </p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {(recent.length ? [...recent, ...tools.filter((t) => !recent.includes(t))] : tools).map(
-              (t) => (
-                <div
-                  key={t.id}
-                  className="panel px-3.5 py-3 transition-shadow hover:shadow-lift"
-                >
-                  <p className="flex items-center gap-2 text-sm font-medium">
-                    <ToolIcon id={t.id} /> {t.name}
-                    {t.featured && (
-                      <span className="rounded-full border border-brand/30 bg-brand-soft px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-brand uppercase">
-                        Featured
-                      </span>
-                    )}
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{t.hint}</p>
-                </div>
-              ),
-            )}
+            {landingTools.map((t) => (
+              <div
+                key={t.id}
+                className="panel px-3.5 py-3 transition-shadow hover:shadow-lift"
+              >
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  <ToolIcon id={t.id} /> {t.name}
+                  {t.featured && (
+                    <span className="rounded-full border border-brand/30 bg-brand-soft px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-brand uppercase">
+                      Featured
+                    </span>
+                  )}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t.hint}</p>
+              </div>
+            ))}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
             Stack as many steps as you need — shape, look, then export.
@@ -631,59 +665,57 @@ export function Workspace() {
           )}
         </div>
         <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:gap-x-4 sm:gap-y-2 sm:overflow-visible sm:px-0 sm:pb-0">
-          {stages.map((stage, si) => (
-            <div key={stage.id} className="flex shrink-0 items-center gap-1.5 sm:flex-wrap">
+          {toolGroups.map((group, si) => (
+            <div key={group.id} className="flex shrink-0 items-center gap-1.5 sm:flex-wrap">
               {si > 0 && <span className="mr-1 hidden h-5 w-px bg-border sm:block" />}
               <span className="mr-0.5 hidden text-[11px] tracking-wide text-muted-foreground uppercase sm:inline">
-                {stage.label}
+                {group.label}
               </span>
-              {tools
-                .filter((t) => t.stage === stage.id)
-                .map((t) => {
-                  const on = isStepActive(t, settings);
-                  return (
-                    <span
-                      key={t.id}
-                      className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 transition-colors ${
-                        toolId === t.id
-                          ? "border-brand bg-brand-soft"
-                          : on
-                            ? "border-border bg-elevated"
-                            : "border-border bg-surface hover:bg-accent/60"
-                      }`}
+              {group.items.map((t) => {
+                const on = isStepActive(t, settings);
+                return (
+                  <span
+                    key={t.id}
+                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 transition-colors ${
+                      toolId === t.id
+                        ? "border-brand bg-brand-soft"
+                        : on
+                          ? "border-border bg-elevated"
+                          : "border-border bg-surface hover:bg-accent/60"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => openTool(t.id)}
+                      title={t.hint}
+                      className="flex items-center gap-1.5 text-left"
                     >
+                      {on && (
+                        <span className="flex size-3.5 items-center justify-center rounded-full bg-brand text-background">
+                          <Check className="size-2.5" />
+                        </span>
+                      )}
+                      {!on && <ToolIcon id={t.id} />}
+                      <span className="text-xs font-medium whitespace-nowrap">{t.name}</span>
+                      {t.featured && (
+                        <span className="rounded-full border border-brand/30 bg-brand-soft px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-brand uppercase">
+                          Featured
+                        </span>
+                      )}
+                    </button>
+                    {on && (
                       <button
                         type="button"
-                        onClick={() => openTool(t.id)}
-                        title={t.hint}
-                        className="flex items-center gap-1.5 text-left"
+                        aria-label={`Clear ${t.name}`}
+                        onClick={() => clearStep(t.id)}
+                        className="text-muted-foreground hover:text-foreground"
                       >
-                        {on && (
-                          <span className="flex size-3.5 items-center justify-center rounded-full bg-brand text-background">
-                            <Check className="size-2.5" />
-                          </span>
-                        )}
-                        {!on && <ToolIcon id={t.id} />}
-                        <span className="text-xs font-medium whitespace-nowrap">{t.name}</span>
-                        {t.featured && (
-                          <span className="rounded-full border border-brand/30 bg-brand-soft px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-brand uppercase">
-                            Featured
-                          </span>
-                        )}
+                        <X className="size-3" />
                       </button>
-                      {on && (
-                        <button
-                          type="button"
-                          aria-label={`Clear ${t.name}`}
-                          onClick={() => clearStep(t.id)}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <X className="size-3" />
-                        </button>
-                      )}
-                    </span>
-                  );
-                })}
+                    )}
+                  </span>
+                );
+              })}
             </div>
           ))}
         </div>

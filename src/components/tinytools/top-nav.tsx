@@ -23,9 +23,9 @@ export function TopNav() {
           <Image
             src="/site-icon.png"
             alt=""
-            width={24}
-            height={24}
-            className="size-6 rounded-md object-cover"
+            width={207}
+            height={286}
+            className="h-10 w-auto object-contain"
             unoptimized
             priority
           />

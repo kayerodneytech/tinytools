@@ -175,6 +175,12 @@ export const tools: Tool[] = [
   },
 ];
 
+/** Featured utilities lead every ungrouped tool list. */
+export const orderedTools: Tool[] = [
+  ...tools.filter((tool) => tool.featured),
+  ...tools.filter((tool) => !tool.featured),
+];
+
 export const stages: { id: Tool["stage"]; label: string }[] = [
   { id: "shape", label: "Shape" },
   { id: "look", label: "Look" },

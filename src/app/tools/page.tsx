@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/components/tinytools/page-shell";
-import { roadmap, tools } from "@/lib/tinytools/catalog";
+import { orderedTools, roadmap } from "@/lib/tinytools/catalog";
 import { absoluteUrl } from "@/lib/seo";
 
 const description =
@@ -41,9 +41,16 @@ export default function ToolsPage() {
         </header>
 
         <div className="grid gap-2 sm:grid-cols-2">
-          {tools.map((t) => (
+          {orderedTools.map((t) => (
             <Link key={t.id} href="/" className="panel px-4 py-3.5 transition-shadow hover:shadow-lift">
-              <p className="text-sm font-medium">{t.name}</p>
+              <p className="flex items-center gap-2 text-sm font-medium">
+                {t.name}
+                {t.featured && (
+                  <span className="rounded-full border border-brand/30 bg-brand-soft px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-brand uppercase">
+                    Featured
+                  </span>
+                )}
+              </p>
               <p className="mt-0.5 text-xs text-muted-foreground">{t.hint}</p>
             </Link>
           ))}
