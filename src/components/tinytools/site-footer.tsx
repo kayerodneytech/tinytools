@@ -4,19 +4,7 @@ import { siteConfig } from "@/lib/seo";
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-border bg-background">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 sm:flex-row sm:py-6">
-        <p className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()}{" "}
-          <a
-            href={siteConfig.creator.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline-offset-2 hover:text-foreground hover:underline"
-          >
-            {siteConfig.creator.name}
-          </a>
-          .
-        </p>
+      <div className="mx-auto flex max-w-6xl items-center justify-center px-5 py-6 sm:justify-end">
         <a
           href={siteConfig.creator.url}
           target="_blank"

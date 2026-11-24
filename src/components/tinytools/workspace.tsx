@@ -438,7 +438,7 @@ export function Workspace() {
   if (!active) return null;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 px-5 py-8">
+    <div className="mx-auto max-w-6xl space-y-4 px-3 py-4 sm:space-y-5 sm:px-5 sm:py-8">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-lg font-semibold">
           {items.length} file{items.length > 1 ? "s" : ""} ready
@@ -460,7 +460,7 @@ export function Workspace() {
       </div>
 
       {/* Tool bar: everything is one click away at the top, grouped shape → look → export. */}
-      <div className="panel sticky top-2 z-20 space-y-2 p-3">
+      <div className="panel sticky top-12 z-30 space-y-2 p-2.5 sm:top-14 sm:p-3">
         <div className="flex items-baseline justify-between">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Tools</p>
           {activeSteps.length > 0 && (
@@ -473,11 +473,11 @@ export function Workspace() {
             </button>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:gap-x-4 sm:gap-y-2 sm:overflow-visible sm:px-0 sm:pb-0">
           {stages.map((stage, si) => (
-            <div key={stage.id} className="flex flex-wrap items-center gap-1.5">
+            <div key={stage.id} className="flex shrink-0 items-center gap-1.5 sm:flex-wrap">
               {si > 0 && <span className="mr-1 hidden h-5 w-px bg-border sm:block" />}
-              <span className="mr-0.5 text-[11px] tracking-wide text-muted-foreground uppercase">
+              <span className="mr-0.5 hidden text-[11px] tracking-wide text-muted-foreground uppercase sm:inline">
                 {stage.label}
               </span>
               {tools
@@ -532,17 +532,17 @@ export function Workspace() {
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[300px_1fr]">
-        <aside className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-[300px_1fr] lg:gap-5">
+        <aside className="order-2 space-y-3 lg:order-1 lg:space-y-4">
           <DropZone onFiles={addFiles} compact />
 
-          <div className="grid max-h-[calc(100vh-20rem)] grid-cols-2 gap-2 overflow-y-auto pr-1">
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:max-h-[calc(100vh-20rem)] lg:grid-cols-2 lg:overflow-y-auto lg:pr-1">
             {items.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setActiveId(item.id)}
-                className={`animate-in-soft group relative min-w-0 overflow-hidden rounded-xl border p-1.5 text-left transition-colors ${
+                className={`animate-in-soft group relative w-20 shrink-0 overflow-hidden rounded-xl border p-1 text-left transition-colors lg:w-auto lg:min-w-0 lg:p-1.5 ${
                   active?.id === item.id
                     ? "border-brand bg-brand-soft"
                     : "border-border bg-surface hover:bg-accent/50"
@@ -561,7 +561,7 @@ export function Workspace() {
                     </span>
                   )}
                 </span>
-                <span className="block min-w-0 px-1 pt-2 pb-1">
+                <span className="hidden min-w-0 px-1 pt-2 pb-1 lg:block">
                   <span className="block truncate text-xs font-medium" title={item.file.name}>
                     {item.file.name}
                   </span>
@@ -581,7 +581,7 @@ export function Workspace() {
                     e.stopPropagation();
                     setItems((prev) => prev.filter((i) => i.id !== item.id));
                   }}
-                  className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-background/85 text-muted-foreground opacity-0 shadow-sm backdrop-blur transition-opacity group-hover:opacity-100 focus:opacity-100"
+                  className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-background/85 text-muted-foreground shadow-sm backdrop-blur lg:top-2 lg:right-2 lg:size-6 lg:opacity-0 lg:transition-opacity lg:group-hover:opacity-100 lg:focus:opacity-100"
                 >
                   <X className="size-3.5" />
                 </span>
@@ -590,7 +590,7 @@ export function Workspace() {
           </div>
         </aside>
 
-        <section className="space-y-4">
+        <section className="order-1 space-y-4 lg:order-2">
           {activeSteps.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
               <span className="text-muted-foreground">Recipe:</span>
@@ -636,7 +636,7 @@ export function Workspace() {
             </div>
           ) : (
             <div className="grid gap-4 xl:grid-cols-[280px_1fr]">
-              <div className="panel space-y-4 p-4">
+              <div className="panel order-2 space-y-4 p-4 xl:order-1">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold">{tool.name}</p>
                   <button
@@ -688,7 +688,7 @@ export function Workspace() {
               </div>
 
               <div
-                className="panel relative space-y-4 p-4"
+                className="panel relative order-1 space-y-4 p-3 sm:p-4 xl:order-2"
                 aria-busy={tool.id === "collage" ? collageWorking : active?.status === "working"}
               >
                 {(tool.id === "collage" ? collageWorking : active?.status === "working") && (

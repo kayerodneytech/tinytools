@@ -6,7 +6,7 @@ export function PageShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <TopNav />
-      <div className="flex-1">{children}</div>
+      <div className="flex-1 pt-12 sm:pt-14">{children}</div>
       <SiteFooter />
     </div>
   );

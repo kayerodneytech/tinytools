@@ -63,7 +63,7 @@ export function DropZone({ onFiles, compact }: Props) {
         over
           ? "border-brand bg-brand-soft"
           : "border-border-strong bg-surface hover:border-brand hover:bg-accent/40"
-      } ${compact ? "px-5 py-6" : "px-8 py-16"}`}
+      } ${compact ? "px-3 py-3 sm:px-4 sm:py-4" : "px-8 py-16"}`}
     >
       <input
         ref={inputRef}
@@ -76,16 +76,22 @@ export function DropZone({ onFiles, compact }: Props) {
           e.currentTarget.value = "";
         }}
       />
-      <div className="flex flex-col items-center gap-3 text-center">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-accent text-muted-foreground transition-colors group-hover:text-brand">
+      <div
+        className={`flex items-center gap-3 ${compact ? "flex-row text-left" : "flex-col text-center"}`}
+      >
+        <span
+          className={`flex shrink-0 items-center justify-center rounded-xl bg-accent text-muted-foreground transition-colors group-hover:text-brand ${compact ? "size-9" : "size-10"}`}
+        >
           <UploadCloud className="size-5" />
         </span>
         <div>
           <p className={compact ? "text-sm font-medium" : "text-lg font-semibold"}>
-            Drop files here
+            {compact ? "Drop more files" : "Drop files here"}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Drop anywhere on the page · batch friendly · private by default
+          <p className={`mt-1 text-xs text-muted-foreground ${compact ? "hidden sm:block" : ""}`}>
+            {compact
+              ? "Drop anywhere or tap to browse"
+              : "Drop anywhere on the page · batch friendly · private by default"}
           </p>
         </div>
         {!compact && (
