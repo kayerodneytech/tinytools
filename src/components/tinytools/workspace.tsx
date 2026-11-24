@@ -112,13 +112,20 @@ export function Workspace() {
   const tool: Tool | undefined = toolId ? toolById(toolId) : undefined;
 
   const addFiles = useCallback(async (files: File[]) => {
-    let added = 0;
-    let lastError: unknown;
     for (const file of files) {
       try {
-        // HEIC needs a decoded copy for both the bitmap and the on-screen preview.
-        const source = isHeicFile(file) ? await decodeHeic(file) : file;
-        const bitmap = await loadBitmap(source);
+        // Prefer a decoded HEIC copy, but keep the original when the browser can handle it itself.
+        let source: Blob = file;
+        let useNativeDecoder = false;
+        if (isHeicFile(file)) {
+          try {
+            source = await decodeHeic(file);
+          } catch {
+            source = file;
+            useNativeDecoder = true;
+          }
+        }
+        const bitmap = useNativeDecoder ? await createImageBitmap(file) : await loadBitmap(source);
         const id = `f${++counter}`;
         const item: Item = {
           id,
@@ -133,7 +140,6 @@ export function Workspace() {
         };
         setItems((current) => [...current, item]);
         setActiveId((current) => current ?? id);
-        added += 1;
 
         // Metadata inspection should never delay the image appearing in the workspace.
         void hasAiContentMetadata(file).then((hasAiMetadata) => {
@@ -144,19 +150,9 @@ export function Workspace() {
             ),
           );
         });
-      } catch (error) {
-        lastError = error;
+      } catch {
+        // Unsupported files are ignored; the rest of the selection can continue normally.
       }
-    }
-    if (!added) {
-      throw lastError instanceof Error
-        ? lastError
-        : new Error("These images could not be decoded on this device.");
-    }
-    if (lastError && added < files.length) {
-      throw new Error(
-        `${added} of ${files.length} images were prepared. One or more files could not be decoded.`,
-      );
     }
   }, []);
 
