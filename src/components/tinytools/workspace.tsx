@@ -947,7 +947,7 @@ export function Workspace() {
                     ) : (
                       <img
                         src={visibleResult.url}
-                        alt={tool.id === "collage" ? "Collage preview" : `${active.file.name} result`}
+                        alt={`${active.file.name} result`}
                         className="checkerboard max-h-[58vh] w-full rounded-xl border border-border object-contain"
                       />
                     )}

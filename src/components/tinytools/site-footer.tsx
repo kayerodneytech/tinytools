@@ -10,10 +10,10 @@ export function SiteFooter() {
           target="_blank"
           rel="noopener noreferrer"
           className="group flex items-center gap-3 rounded-xl outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          aria-label={`Created by ${siteConfig.creator.name}`}
+          aria-label={`Developed by ${siteConfig.creator.name}`}
         >
           <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase transition-colors group-hover:text-foreground">
-            Created by
+            Developed by
           </span>
           {/* Light mode: dark logo. Dark mode: light logo. Transparent PNGs — no chrome behind. */}
           <Image
