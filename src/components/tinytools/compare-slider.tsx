@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- Blob URL previews cannot use Next image optimization. */
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function CompareSlider({

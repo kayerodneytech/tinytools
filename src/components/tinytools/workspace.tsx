@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- Blob URL previews are local and cannot be optimized by Next. */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -428,6 +430,9 @@ export function Workspace() {
       </div>
     );
   }
+
+  // `active` is derived from `items`; keep the invariant explicit for TypeScript.
+  if (!active) return null;
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 px-5 py-8">

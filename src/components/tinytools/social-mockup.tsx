@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- Blob URL previews cannot use Next image optimization. */
+
 import { Bookmark, Heart, MessageCircle, MoreHorizontal, Play, Repeat2, Send, ThumbsUp } from "lucide-react";
 import type { SocialPlatform } from "@/lib/tinytools/catalog";
 

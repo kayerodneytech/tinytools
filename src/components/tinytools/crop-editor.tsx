@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- Blob URL previews cannot use Next image optimization. */
+
 import { useCallback, useEffect, useRef } from "react";
 import type { CropRect, ProcessSettings } from "@/lib/tinytools/process";
 
