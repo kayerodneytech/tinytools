@@ -7,7 +7,7 @@ export async function cutoutBitmap(key: string, source: Blob): Promise<ImageBitm
 
   const { removeBackground } = await import("@imgly/background-removal");
   const blob = await removeBackground(source, {
-    model: "medium",
+    model: "isnet_fp16",
     output: { format: "image/png", quality: 0.9 },
   });
   const bmp = await createImageBitmap(blob);

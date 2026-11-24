@@ -50,6 +50,16 @@ type Item = {
   bitmap: ImageBitmap;
   result?: ProcessResult;
   status: "idle" | "working" | "done" | "error";
+  collage?: CollageRecipe;
+};
+
+type CollageRecipe = {
+  sourceIds: string[];
+  positions: Record<string, CollagePosition>;
+  preset: ProcessSettings["collagePreset"];
+  aspect: ProcessSettings["collageAspect"];
+  gap: number;
+  background: ProcessSettings["collageBackground"];
 };
 
 let counter = 0;
@@ -77,6 +87,8 @@ export function Workspace() {
   const [collageWorking, setCollageWorking] = useState(false);
   const [collageError, setCollageError] = useState("");
   const [collagePositions, setCollagePositions] = useState<Record<string, CollagePosition>>({});
+  const [collageSourceIds, setCollageSourceIds] = useState<string[]>([]);
+  const [editingCollageId, setEditingCollageId] = useState<string | null>(null);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(
     null,
   );
@@ -115,27 +127,56 @@ export function Workspace() {
   const aspect = active ? active.width / active.height : 4 / 3;
 
   /** Opening a step never discards other steps — the recipe accumulates. */
-  const openTool = useCallback((id: string) => {
-    const t = toolById(id);
-    if (!t) return;
-    setToolId(id);
-    pushRecentTool(id);
-    setSettings((s) => {
-      const touched = isStepActive(t, s);
-      const next: ProcessSettings = { ...s };
-      if (!touched) {
-        if (t.panel === "quality" || t.panel === "format") {
-          const p = getPrefs();
-          next.format = p.format;
-          next.quality = p.quality;
-        }
-        Object.assign(next, t.apply ?? {});
+  const openTool = useCallback(
+    (id: string) => {
+      const t = toolById(id);
+      if (!t) return;
+      const collage = id === "collage" ? active?.collage : undefined;
+      if (id === "collage") {
+        const sourceIds =
+          collage?.sourceIds ?? items.filter((item) => !item.collage).map((item) => item.id);
+        setCollageSourceIds(sourceIds);
+        setCollagePositions(collage?.positions ?? {});
+        setEditingCollageId(collage ? active?.id ?? null : null);
+        setCollageResult(
+          collage && active
+            ? {
+                blob: active.source,
+                url: active.url,
+                width: active.width,
+                height: active.height,
+                type: active.source.type,
+                filename: active.file.name,
+              }
+            : undefined,
+        );
       }
-      next.collageEnabled = id === "collage";
-      if (t.preview === "crop" && !next.cropRect) next.cropRect = { x: 0, y: 0, w: 1, h: 1 };
-      return next;
-    });
-  }, []);
+      setToolId(id);
+      pushRecentTool(id);
+      setSettings((s) => {
+        const touched = isStepActive(t, s);
+        const next: ProcessSettings = { ...s };
+        if (!touched) {
+          if (t.panel === "quality" || t.panel === "format") {
+            const p = getPrefs();
+            next.format = p.format;
+            next.quality = p.quality;
+          }
+          Object.assign(next, t.apply ?? {});
+        }
+        next.collageEnabled = id === "collage";
+        if (collage) {
+          next.collagePreset = collage.preset;
+          next.collageAspect = collage.aspect;
+          next.collageGap = collage.gap;
+          next.collageBackground = collage.background;
+        }
+        if (t.preview === "crop" && !next.cropRect) next.cropRect = { x: 0, y: 0, w: 1, h: 1 };
+        return next;
+      });
+    },
+    [active, items],
+  );
 
   const patchSettings = useCallback(
     (patch: Partial<ProcessSettings>) => {
@@ -188,14 +229,54 @@ export function Workspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings, active?.id, activeIndex]);
 
-  const itemSignature = items.map((item) => item.id).join(",");
+  const collageSources = useMemo(
+    () =>
+      collageSourceIds
+        .map((id) => items.find((item) => item.id === id))
+        .filter((item): item is Item => Boolean(item)),
+    [collageSourceIds, items],
+  );
+  const collageSourceSignature = collageSources.map((item) => item.id).join(",");
   const collagePositionList = useMemo(
-    () => items.map((item) => collagePositions[item.id] ?? { x: 0.5, y: 0.5 }),
-    [items, collagePositions],
+    () => collageSources.map((item) => collagePositions[item.id] ?? { x: 0.5, y: 0.5 }),
+    [collageSources, collagePositions],
   );
   const collagePositionSignature = collagePositionList
     .map((position) => `${position.x.toFixed(4)}:${position.y.toFixed(4)}`)
     .join(",");
+
+  // Persist edits immediately so switching tools never loses the collage arrangement.
+  useEffect(() => {
+    if (!editingCollageId || collageSources.length < 2) return;
+    const recipe: CollageRecipe = {
+      sourceIds: collageSources.map((item) => item.id),
+      positions: Object.fromEntries(
+        collageSources.map((item, index) => [
+          item.id,
+          collagePositionList[index] ?? { x: 0.5, y: 0.5 },
+        ]),
+      ),
+      preset: settings.collagePreset,
+      aspect: settings.collageAspect,
+      gap: settings.collageGap,
+      background: settings.collageBackground,
+    };
+    setItems((current) =>
+      current.map((item) =>
+        item.id === editingCollageId ? { ...item, collage: recipe } : item,
+      ),
+    );
+    // Signatures cover source order and positions without reacting to generated item previews.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    editingCollageId,
+    collageSourceSignature,
+    collagePositionSignature,
+    settings.collagePreset,
+    settings.collageAspect,
+    settings.collageGap,
+    settings.collageBackground,
+  ]);
 
   // Collages are a single composition made from every uploaded image.
   useEffect(() => {
@@ -205,11 +286,8 @@ export function Workspace() {
       return;
     }
     const token = ++collageSeq.current;
-    if (items.length < 2) {
-      setCollageResult((previous) => {
-        if (previous) URL.revokeObjectURL(previous.url);
-        return undefined;
-      });
+    if (collageSources.length < 2) {
+      setCollageResult(undefined);
       setCollageError("Upload at least two images to create a collage.");
       setCollageWorking(false);
       return;
@@ -218,13 +296,62 @@ export function Workspace() {
       setCollageWorking(true);
       setCollageError("");
       try {
-        const bitmaps = await Promise.all(items.map(bitmapFor));
+        const bitmaps = await Promise.all(collageSources.map(bitmapFor));
         const result = await processCollage(bitmaps, settings, collagePositionList);
         if (token !== collageSeq.current) return;
-        setCollageResult((previous) => {
-          if (previous) URL.revokeObjectURL(previous.url);
-          return result;
-        });
+        const bitmap = await createImageBitmap(result.blob);
+        const file = new File([result.blob], result.filename, { type: result.type });
+        const recipe: CollageRecipe = {
+          sourceIds: collageSources.map((item) => item.id),
+          positions: Object.fromEntries(
+            collageSources.map((item, index) => [
+              item.id,
+              collagePositionList[index] ?? { x: 0.5, y: 0.5 },
+            ]),
+          ),
+          preset: settings.collagePreset,
+          aspect: settings.collageAspect,
+          gap: settings.collageGap,
+          background: settings.collageBackground,
+        };
+        setCollageResult(result);
+        if (editingCollageId) {
+          setItems((current) =>
+            current.map((item) =>
+              item.id === editingCollageId
+                ? {
+                    ...item,
+                    file,
+                    source: result.blob,
+                    url: result.url,
+                    width: result.width,
+                    height: result.height,
+                    bitmap,
+                    result,
+                    status: "done" as const,
+                    collage: recipe,
+                  }
+                : item,
+            ),
+          );
+        } else {
+          const id = `c${++counter}`;
+          const collageItem: Item = {
+            id,
+            file,
+            source: result.blob,
+            url: result.url,
+            width: result.width,
+            height: result.height,
+            bitmap,
+            result,
+            status: "done",
+            collage: recipe,
+          };
+          setItems((current) => [...current, collageItem]);
+          setEditingCollageId(id);
+          setActiveId(id);
+        }
       } catch (error) {
         if (token !== collageSeq.current) return;
         setCollageError(error instanceof Error ? error.message : "Could not create the collage.");
@@ -233,9 +360,9 @@ export function Workspace() {
       }
     }, 120);
     return () => clearTimeout(timer);
-    // itemSignature intentionally represents the source list without reacting to preview results.
+    // Signatures intentionally represent the collage inputs without reacting to generated previews.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings, itemSignature, collagePositionSignature, bitmapFor]);
+  }, [settings, collageSourceSignature, collagePositionSignature, bitmapFor, editingCollageId]);
 
   const applyToAll = useCallback(async () => {
     setBusy(true);
@@ -265,7 +392,7 @@ export function Workspace() {
   const runExport = useCallback(
     async (opts: ExportOptions) => {
       if (settings.collageEnabled) {
-        if (items.length < 2) return;
+        if (collageSources.length < 2) return;
         const exportSettings: ProcessSettings = {
           ...settings,
           ...(opts.format ? { format: opts.format } : {}),
@@ -275,14 +402,11 @@ export function Workspace() {
         setBatchProgress({ current: 1, total: 1 });
         try {
           const result = await processCollage(
-            await Promise.all(items.map(bitmapFor)),
+            await Promise.all(collageSources.map(bitmapFor)),
             exportSettings,
             collagePositionList,
           );
-          setCollageResult((previous) => {
-            if (previous) URL.revokeObjectURL(previous.url);
-            return result;
-          });
+          setCollageResult(result);
           if (opts.as === "pdf") {
             const { downloadPdf } = await import("@/lib/tinytools/pdf");
             await downloadPdf([result], opts.pdfPageSize);
@@ -337,7 +461,7 @@ export function Workspace() {
       setBusy(false);
       setBatchProgress(null);
     },
-    [active, items, settings, bitmapFor, collagePositionList],
+    [active, items, settings, bitmapFor, collagePositionList, collageSources],
   );
 
   // The nav's Export menu drives the same pipeline as the in-page buttons.
@@ -352,16 +476,21 @@ export function Workspace() {
   }, [items.length, active, busy, runExport, settings.collageEnabled]);
 
   const reset = useCallback(() => {
-    setCollageResult((previous) => {
-      if (previous) URL.revokeObjectURL(previous.url);
-      return undefined;
-    });
+    setCollageResult(undefined);
     setItems([]);
     setActiveId(null);
     setToolId(null);
     setSettings(defaultSettings);
     setCollageError("");
     setCollagePositions({});
+    setCollageSourceIds([]);
+    setEditingCollageId(null);
+  }, []);
+
+  const removeItem = useCallback((id: string) => {
+    setItems((current) => current.filter((item) => item.id !== id));
+    setActiveId((current) => (current === id ? null : current));
+    setEditingCollageId((current) => (current === id ? null : current));
   }, []);
 
   // Keyboard shortcuts: Enter exports the current image, Escape closes the tool, Delete removes it.
@@ -375,13 +504,12 @@ export function Workspace() {
         void runExport({ scope: "current", as: "files" });
       }
       if ((e.key === "Delete" || e.key === "Backspace") && active) {
-        setItems((prev) => prev.filter((i) => i.id !== active.id));
-        setActiveId(null);
+        removeItem(active.id);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active, collageResult, runExport, settings.collageEnabled]);
+  }, [active, collageResult, removeItem, runExport, settings.collageEnabled]);
 
   const suggestions = useMemo(() => {
     if (!active) return [];
@@ -407,16 +535,13 @@ export function Workspace() {
     setCollagePositions((current) => ({ ...current, [id]: position }));
   };
   const reorderCollageItem = (sourceId: string, targetId: string) => {
-    setItems((current) => {
-      const sourceIndex = current.findIndex((item) => item.id === sourceId);
-      const targetIndex = current.findIndex((item) => item.id === targetId);
+    setCollageSourceIds((current) => {
+      const sourceIndex = current.indexOf(sourceId);
+      const targetIndex = current.indexOf(targetId);
       if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return current;
       const next = [...current];
-      const source = next[sourceIndex];
-      const target = next[targetIndex];
-      if (!source || !target) return current;
-      next[sourceIndex] = target;
-      next[targetIndex] = source;
+      next[sourceIndex] = targetId;
+      next[targetIndex] = sourceId;
       return next;
     });
   };
@@ -582,6 +707,11 @@ export function Workspace() {
               >
                 <span className="checkerboard relative block aspect-square overflow-hidden rounded-lg bg-accent/40">
                   <img src={item.url} alt="" className="size-full object-cover" />
+                  {item.collage && (
+                    <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-md bg-background/90 px-1.5 py-1 text-[9px] font-semibold shadow-sm backdrop-blur">
+                      <ToolIcon id="collage" className="size-3" /> Collage
+                    </span>
+                  )}
                   {item.status === "working" && (
                     <span className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-[2px]">
                       <LoaderCircle className="size-5 animate-spin text-brand" />
@@ -611,7 +741,7 @@ export function Workspace() {
                   aria-label={`Remove ${item.file.name}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setItems((prev) => prev.filter((i) => i.id !== item.id));
+                    removeItem(item.id);
                   }}
                   className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-background/85 text-muted-foreground shadow-sm backdrop-blur lg:top-2 lg:right-2 lg:size-6 lg:opacity-0 lg:transition-opacity lg:group-hover:opacity-100 lg:focus:opacity-100"
                 >
@@ -684,14 +814,16 @@ export function Workspace() {
                   settings={settings}
                   onChange={patchSettings}
                   sampleSrc={active?.url}
-                  itemCount={items.length}
+                  itemCount={tool.id === "collage" ? collageSources.length : items.length}
                 />
                 <div className="flex flex-col gap-2 border-t border-border pt-3">
                   {tool.id === "collage" ? (
                     <Button
                       size="sm"
                       onClick={() => void runExport({ scope: "current", as: "files" })}
-                      disabled={busy || collageWorking || items.length < 2 || !collageResult}
+                      disabled={
+                        busy || collageWorking || collageSources.length < 2 || !collageResult
+                      }
                       className="w-full"
                     >
                       {busy ? "Exporting collage…" : "Download collage"}
@@ -738,7 +870,7 @@ export function Workspace() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {collageWorking
-                          ? `Combining ${items.length} images locally in your browser.`
+                          ? `Combining ${collageSources.length} images locally in your browser.`
                           : settings.removeBg
                           ? "Running the AI cutout locally in your browser."
                           : "Applying your current recipe to this image."}
@@ -750,7 +882,7 @@ export function Workspace() {
                   <>
                     {tool.id === "collage" ? (
                       <CollageEditor
-                        sources={items.map((item) => ({
+                        sources={collageSources.map((item) => ({
                           id: item.id,
                           src: item.url,
                           name: item.file.name,
@@ -830,7 +962,7 @@ export function Workspace() {
                         label={tool.id === "collage" ? "Images" : "Saved"}
                         value={
                           tool.id === "collage"
-                            ? String(items.length)
+                            ? String(collageSources.length)
                             : `${percentDelta(active.file.size, visibleResult.blob.size)}%`
                         }
                         accent
