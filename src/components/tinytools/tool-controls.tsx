@@ -103,8 +103,8 @@ export function ToolControls({ tool, settings, onChange, sampleSrc, itemCount = 
             </div>
           ) : (
             <p className="rounded-lg bg-accent/60 px-3 py-2 text-xs text-muted-foreground">
-              Combining all {itemCount} uploaded images. Images are center-cropped to fill each
-              frame.
+              Combining all {itemCount} uploaded images. Reorder and reposition them directly in
+              the preview.
             </p>
           )}
           <Row label="Arrangement">

@@ -5,6 +5,7 @@ import {
 } from "./process";
 
 type Rect = { x: number; y: number; w: number; h: number };
+export type CollagePosition = { x: number; y: number };
 
 const aspectValues: Record<ProcessSettings["collageAspect"], number> = {
   "1:1": 1,
@@ -25,7 +26,7 @@ function gridRects(count: number, width: number, height: number): Rect[] {
   });
 }
 
-function layoutRects(
+export function collageLayoutRects(
   count: number,
   width: number,
   height: number,
@@ -86,7 +87,13 @@ function layoutRects(
   return gridRects(count, width, height);
 }
 
-function drawCover(ctx: CanvasRenderingContext2D, bitmap: ImageBitmap, rect: Rect, gap: number) {
+function drawCover(
+  ctx: CanvasRenderingContext2D,
+  bitmap: ImageBitmap,
+  rect: Rect,
+  gap: number,
+  position: CollagePosition,
+) {
   const x = rect.x + gap / 2;
   const y = rect.y + gap / 2;
   const width = Math.max(1, rect.w - gap);
@@ -94,14 +101,15 @@ function drawCover(ctx: CanvasRenderingContext2D, bitmap: ImageBitmap, rect: Rec
   const scale = Math.max(width / bitmap.width, height / bitmap.height);
   const sourceWidth = width / scale;
   const sourceHeight = height / scale;
-  const sourceX = (bitmap.width - sourceWidth) / 2;
-  const sourceY = (bitmap.height - sourceHeight) / 2;
+  const sourceX = (bitmap.width - sourceWidth) * Math.min(1, Math.max(0, position.x));
+  const sourceY = (bitmap.height - sourceHeight) * Math.min(1, Math.max(0, position.y));
   ctx.drawImage(bitmap, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
 }
 
 export async function processCollage(
   bitmaps: ImageBitmap[],
   settings: ProcessSettings,
+  positions: CollagePosition[] = [],
 ): Promise<ProcessResult> {
   if (bitmaps.length < 2) throw new Error("A collage needs at least two images.");
 
@@ -123,10 +131,12 @@ export async function processCollage(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  const rects = layoutRects(bitmaps.length, width, height, settings.collagePreset);
+  const rects = collageLayoutRects(bitmaps.length, width, height, settings.collagePreset);
   bitmaps.forEach((bitmap, index) => {
     const rect = rects[index];
-    if (rect) drawCover(ctx, bitmap, rect, settings.collageGap);
+    if (rect) {
+      drawCover(ctx, bitmap, rect, settings.collageGap, positions[index] ?? { x: 0.5, y: 0.5 });
+    }
   });
 
   const requestedType = settings.format === "keep" ? "image/jpeg" : settings.format;

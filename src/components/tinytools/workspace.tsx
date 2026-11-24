@@ -34,8 +34,10 @@ import { buildFilename } from "@/lib/tinytools/rename";
 import { getPrefs, pushRecentTool, setPrefs, usePrefs } from "@/lib/tinytools/prefs";
 import { cutoutBitmap } from "@/lib/tinytools/bg";
 import { processCollage } from "@/lib/tinytools/collage";
+import type { CollagePosition } from "@/lib/tinytools/collage";
 import { setExportApi, type ExportOptions } from "@/lib/tinytools/export-bus";
 import { ToolIcon } from "./tool-icon";
+import { CollageEditor } from "./collage-editor";
 
 type Item = {
   id: string;
@@ -74,6 +76,7 @@ export function Workspace() {
   const [collageResult, setCollageResult] = useState<ProcessResult | undefined>();
   const [collageWorking, setCollageWorking] = useState(false);
   const [collageError, setCollageError] = useState("");
+  const [collagePositions, setCollagePositions] = useState<Record<string, CollagePosition>>({});
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(
     null,
   );
@@ -186,6 +189,13 @@ export function Workspace() {
   }, [settings, active?.id, activeIndex]);
 
   const itemSignature = items.map((item) => item.id).join(",");
+  const collagePositionList = useMemo(
+    () => items.map((item) => collagePositions[item.id] ?? { x: 0.5, y: 0.5 }),
+    [items, collagePositions],
+  );
+  const collagePositionSignature = collagePositionList
+    .map((position) => `${position.x.toFixed(4)}:${position.y.toFixed(4)}`)
+    .join(",");
 
   // Collages are a single composition made from every uploaded image.
   useEffect(() => {
@@ -209,7 +219,7 @@ export function Workspace() {
       setCollageError("");
       try {
         const bitmaps = await Promise.all(items.map(bitmapFor));
-        const result = await processCollage(bitmaps, settings);
+        const result = await processCollage(bitmaps, settings, collagePositionList);
         if (token !== collageSeq.current) return;
         setCollageResult((previous) => {
           if (previous) URL.revokeObjectURL(previous.url);
@@ -225,7 +235,7 @@ export function Workspace() {
     return () => clearTimeout(timer);
     // itemSignature intentionally represents the source list without reacting to preview results.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings, itemSignature, bitmapFor]);
+  }, [settings, itemSignature, collagePositionSignature, bitmapFor]);
 
   const applyToAll = useCallback(async () => {
     setBusy(true);
@@ -264,7 +274,11 @@ export function Workspace() {
         setBusy(true);
         setBatchProgress({ current: 1, total: 1 });
         try {
-          const result = await processCollage(await Promise.all(items.map(bitmapFor)), exportSettings);
+          const result = await processCollage(
+            await Promise.all(items.map(bitmapFor)),
+            exportSettings,
+            collagePositionList,
+          );
           setCollageResult((previous) => {
             if (previous) URL.revokeObjectURL(previous.url);
             return result;
@@ -323,7 +337,7 @@ export function Workspace() {
       setBusy(false);
       setBatchProgress(null);
     },
-    [active, items, settings, bitmapFor],
+    [active, items, settings, bitmapFor, collagePositionList],
   );
 
   // The nav's Export menu drives the same pipeline as the in-page buttons.
@@ -347,6 +361,7 @@ export function Workspace() {
     setToolId(null);
     setSettings(defaultSettings);
     setCollageError("");
+    setCollagePositions({});
   }, []);
 
   // Keyboard shortcuts: Enter exports the current image, Escape closes the tool, Delete removes it.
@@ -388,6 +403,23 @@ export function Workspace() {
   const resultExt = resultFilename.slice(resultFilename.lastIndexOf(".") + 1) || "png";
   const visibleResult =
     tool?.id === "collage" ? (settings.collageEnabled ? collageResult : undefined) : active?.result;
+  const updateCollagePosition = (id: string, position: CollagePosition) => {
+    setCollagePositions((current) => ({ ...current, [id]: position }));
+  };
+  const reorderCollageItem = (sourceId: string, targetId: string) => {
+    setItems((current) => {
+      const sourceIndex = current.findIndex((item) => item.id === sourceId);
+      const targetIndex = current.findIndex((item) => item.id === targetId);
+      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return current;
+      const next = [...current];
+      const source = next[sourceIndex];
+      const target = next[targetIndex];
+      if (!source || !target) return current;
+      next[sourceIndex] = target;
+      next[targetIndex] = source;
+      return next;
+    });
+  };
 
   if (!items.length) {
     return (
@@ -691,7 +723,9 @@ export function Workspace() {
                 className="panel relative order-1 space-y-4 p-3 sm:p-4 xl:order-2"
                 aria-busy={tool.id === "collage" ? collageWorking : active?.status === "working"}
               >
-                {(tool.id === "collage" ? collageWorking : active?.status === "working") && (
+                {(tool.id === "collage"
+                  ? collageWorking && !collageResult
+                  : active?.status === "working") && (
                   <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/72 backdrop-blur-[2px]">
                     <div className="flex max-w-xs flex-col items-center gap-2 px-6 text-center">
                       <LoaderCircle className="size-7 animate-spin text-brand" />
@@ -714,7 +748,22 @@ export function Workspace() {
                 )}
                 {visibleResult ? (
                   <>
-                    {tool.preview === "crop" && socialPreset ? (
+                    {tool.id === "collage" ? (
+                      <CollageEditor
+                        sources={items.map((item) => ({
+                          id: item.id,
+                          src: item.url,
+                          name: item.file.name,
+                        }))}
+                        preset={settings.collagePreset}
+                        aspect={settings.collageAspect}
+                        gap={settings.collageGap}
+                        background={settings.collageBackground}
+                        positions={collagePositions}
+                        onPositionChange={updateCollagePosition}
+                        onReorder={reorderCollageItem}
+                      />
+                    ) : tool.preview === "crop" && socialPreset ? (
                       <SocialMockup
                         src={visibleResult.url}
                         platform={socialPreset.platform}
