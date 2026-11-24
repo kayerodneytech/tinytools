@@ -17,6 +17,7 @@ export type Tool = {
   id: ToolId;
   name: string;
   hint: string;
+  featured?: boolean;
   /** Grouping used by the step rail so the flow reads top to bottom. */
   stage: "shape" | "look" | "export";
   panel:
@@ -84,7 +85,7 @@ export const tools: Tool[] = [
   {
     id: "removebg",
     name: "Remove background",
-    hint: "Server AI cutout",
+    hint: "Private, in-browser AI cutout",
     stage: "look",
     panel: "bgremove",
     preview: "split",
@@ -149,6 +150,7 @@ export const tools: Tool[] = [
     id: "metadata",
     name: "Remove AI content tag",
     hint: "Strip AI tags, EXIF, GPS & camera data",
+    featured: true,
     stage: "export",
     panel: "quality",
     preview: "split",

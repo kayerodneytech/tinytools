@@ -411,12 +411,15 @@ export function Workspace() {
               (t) => (
                 <div
                   key={t.id}
-                  className={`panel px-3.5 py-3 transition-shadow hover:shadow-lift ${
-                    t.id === "metadata" ? "border-brand/35 bg-brand-soft/40" : ""
-                  }`}
+                  className="panel px-3.5 py-3 transition-shadow hover:shadow-lift"
                 >
                   <p className="flex items-center gap-2 text-sm font-medium">
                     <ToolIcon id={t.id} /> {t.name}
+                    {t.featured && (
+                      <span className="rounded-full border border-brand/30 bg-brand-soft px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-brand uppercase">
+                        Featured
+                      </span>
+                    )}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{t.hint}</p>
                 </div>
@@ -489,9 +492,7 @@ export function Workspace() {
                           ? "border-brand bg-brand-soft"
                           : on
                             ? "border-border bg-elevated"
-                            : t.id === "metadata"
-                              ? "border-brand/35 bg-brand-soft/60 hover:border-brand"
-                              : "border-border bg-surface hover:bg-accent/60"
+                            : "border-border bg-surface hover:bg-accent/60"
                       }`}
                     >
                       <button
@@ -507,6 +508,11 @@ export function Workspace() {
                         )}
                         {!on && <ToolIcon id={t.id} />}
                         <span className="text-xs font-medium whitespace-nowrap">{t.name}</span>
+                        {t.featured && (
+                          <span className="rounded-full border border-brand/30 bg-brand-soft px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-brand uppercase">
+                            Featured
+                          </span>
+                        )}
                       </button>
                       {on && (
                         <button
@@ -700,7 +706,7 @@ export function Workspace() {
                         {collageWorking
                           ? `Combining ${items.length} images locally in your browser.`
                           : settings.removeBg
-                          ? "Sending this image to the server for AI cutout."
+                          ? "Running the AI cutout locally in your browser."
                           : "Applying your current recipe to this image."}
                       </p>
                     </div>

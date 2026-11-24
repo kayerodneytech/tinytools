@@ -32,8 +32,8 @@ export default function AboutPage() {
           </p>
           <p>
             Image processing happens locally with the browser&apos;s own canvas and codec pipeline.
-            Your files never touch a server, which makes it faster, private, and workable on flaky
-            connections. Only future AI tools will need server help.
+            Your files never touch a server, which makes it private and workable on flaky
+            connections. Even AI background removal runs locally in your browser.
           </p>
           <p>
             Your last-used format, quality and resize settings are remembered on this device, so
