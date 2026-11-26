@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Instrument_Sans, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeInit } from "@/components/tinytools/theme-init";
 import { absoluteUrl, defaultOgImage, siteConfig } from "@/lib/seo";
@@ -181,6 +182,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className={instrumentSans.className}>
         <ThemeInit>{children}</ThemeInit>
+        <Analytics />
       </body>
     </html>
   );
